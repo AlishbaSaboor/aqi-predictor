@@ -32,7 +32,7 @@ def log_run(script, status, rows_inserted=0, rows_skipped=0,
     error_message : error text if failed
     """
     # Detect if running on GitHub Actions
-    run_env = "github_actions" if os.getenv("GITHUB_ACTIONS") == "true" else "local"
+    run_env = "github_actions" if os.getenv("GITHUB_ACTIONS") else "local"
     run_id  = os.getenv("GITHUB_RUN_ID", "local_run")
 
     entry = {
@@ -61,7 +61,7 @@ def log_training(best_model, all_metrics, train_rows, test_rows):
     Write one training record to training_history collection.
     Called at the end of every train.py run.
     """
-    run_env = "github_actions" if os.getenv("GITHUB_ACTIONS") == "true" else "local"
+    run_env = "github_actions" if os.getenv("GITHUB_ACTIONS") else "local"
     entry = {
         "timestamp":       datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M:%S UTC"),
         "best_model":      best_model,
