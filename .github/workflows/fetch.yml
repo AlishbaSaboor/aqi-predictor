@@ -1,0 +1,30 @@
+name: Hourly AQI Data Fetch
+
+on:
+  schedule:
+    - cron: "0 * * * *"    # Runs every hour at minute 0
+  workflow_dispatch:         # Allows manual trigger from GitHub UI
+
+jobs:
+  fetch-data:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python 3.11
+        uses: actions/setup-python@v4
+        with:
+          python-version: "3.11"
+
+      - name: Install Python packages
+        run: pip install -r requirements.txt
+
+      - name: Fetch latest AQI data and store in MongoDB
+        env:
+          MONGO_URI: ${{ secrets.MONGO_URI }}
+          MONGO_DB:  ${{ secrets.MONGO_DB }}
+        run: |
+          cd data_pipeline
+          python fetch_data.py

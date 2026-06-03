@@ -1,0 +1,44 @@
+name: Daily Model Retraining
+
+on:
+  schedule:
+    - cron: "0 2 * * *"    # Every day at 2:00 AM UTC
+  workflow_dispatch:
+
+jobs:
+  retrain:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python 3.11
+        uses: actions/setup-python@v4
+        with:
+          python-version: "3.11"
+
+      - name: Install Python packages
+        run: pip install -r requirements.txt
+
+      - name: Run feature engineering
+        env:
+          MONGO_URI: ${{ secrets.MONGO_URI }}
+          MONGO_DB:  ${{ secrets.MONGO_DB }}
+        run: |
+          cd data_pipeline
+          python feature_engineering.py
+
+      - name: Train and save best model
+        env:
+          MONGO_URI: ${{ secrets.MONGO_URI }}
+          MONGO_DB:  ${{ secrets.MONGO_DB }}
+        run: |
+          cd training
+          python train.py
+
+      - name: Upload trained models as artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: trained-models-${{ github.run_id }}
+          path: models/
