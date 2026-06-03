@@ -1,0 +1,17 @@
+{
+  "LinearRegression": {
+    "rmse": 15.6108,
+    "mae": 11.7863,
+    "r2": 0.664
+  },
+  "RandomForest": {
+    "rmse": 16.3406,
+    "mae": 12.5894,
+    "r2": 0.6318
+  },
+  "NeuralNetwork": {
+    "rmse": 15.7566,
+    "mae": 12.3105,
+    "r2": 0.6577
+  }
+}
