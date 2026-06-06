@@ -26,18 +26,16 @@ FEATURES = [
 ]
 TARGET = "target_24h"
 
-
 def load_data():
-    print("🔗 Loading training data from MongoDB ...")
+    print("Loading training data from MongoDB ...")
     client  = MongoClient(os.getenv("MONGO_URI"))
     records = list(client[os.getenv("MONGO_DB")]["engineered_features"].find({}, {"_id": 0}))
     client.close()
     df = pd.DataFrame(records).dropna(subset=FEATURES + [TARGET])
     X  = df[FEATURES].values.astype(float)
     y  = df[TARGET].values.astype(float)
-    print(f"✅ Loaded {len(df)} samples with {len(FEATURES)} features")
+    print(f"Loaded {len(df)} samples with {len(FEATURES)} features")
     return X, y, len(df)
-
 
 def evaluate(name, y_true, y_pred):
     rmse = float(np.sqrt(mean_squared_error(y_true, y_pred)))
@@ -46,17 +44,13 @@ def evaluate(name, y_true, y_pred):
     print(f"  {name:22s}  RMSE={rmse:7.2f}  MAE={mae:7.2f}  R²={r2:.4f}")
     return {"rmse": round(rmse,4), "mae": round(mae,4), "r2": round(r2,4)}
 
-
 def train_all():
     try:
         X, y, total = load_data()
-
-        # Split — no shuffle for time-series!
         X_train, X_test, y_train, y_test = train_test_split(
             X, y, test_size=0.2, shuffle=False
         )
 
-        # Scale (needed for Linear Regression and Neural Network)
         scaler    = StandardScaler()
         Xtr_s     = scaler.fit_transform(X_train)
         Xte_s     = scaler.transform(X_test)
@@ -66,18 +60,18 @@ def train_all():
         print(f"{'Model':22s}  {'RMSE':>7}  {'MAE':>7}  {'R²':>7}")
         print(f"{'─'*60}")
 
-        # ── Model 1: Linear Regression ────────────────────────
+        #Linear Regression
         lr = LinearRegression()
         lr.fit(Xtr_s, y_train)
         results["LinearRegression"] = evaluate("LinearRegression", y_test, lr.predict(Xte_s))
 
-        # ── Model 2: Random Forest ────────────────────────────
+        #Random Forest
         print("  [Training Random Forest... ~1 min]")
         rf = RandomForestRegressor(n_estimators=100, random_state=42, n_jobs=-1)
-        rf.fit(X_train, y_train)   # RF does NOT need scaling
+        rf.fit(X_train, y_train)
         results["RandomForest"] = evaluate("RandomForest", y_test, rf.predict(X_test))
 
-        # ── Model 3: Neural Network ───────────────────────────
+        #Neural Network
         print("  [Training Neural Network... ~3 min]")
         tf.random.set_seed(42)
         nn = tf.keras.Sequential([
@@ -97,11 +91,9 @@ def train_all():
 
         print(f"{'='*60}")
 
-        # Pick best model (lowest RMSE)
         best = min(results, key=lambda k: results[k]["rmse"])
-        print(f"\n🏆 Best model: {best}  (RMSE = {results[best]['rmse']})")
+        print(f"\nBest model: {best}  (RMSE = {results[best]['rmse']})")
 
-        # ── Save all models to /models/ ───────────────────────
         joblib.dump(lr,     os.path.join(MODELS_DIR, "linear_regression.pkl"))
         joblib.dump(rf,     os.path.join(MODELS_DIR, "random_forest.pkl"))
         joblib.dump(scaler, os.path.join(MODELS_DIR, "scaler.pkl"))
@@ -112,9 +104,8 @@ def train_all():
         with open(os.path.join(MODELS_DIR, "best_model.txt"), "w") as f:
             f.write(best)
 
-        print("✅ All models saved to /models/")
+        print("All models saved to /models/")
 
-        # ── Write training logs ───────────────────────────────
         log_training(
             best_model=best,
             all_metrics=results,
@@ -131,13 +122,12 @@ def train_all():
                 "total_rows": total,
             }
         )
-        print("🎉 Training complete!")
+        print("Training complete!")
 
     except Exception as err:
         log_run("training", "failed", error_message=str(err))
-        print(f"❌ Training failed: {err}")
+        print(f"raining failed: {err}")
         raise
-
 
 if __name__ == "__main__":
     train_all()
