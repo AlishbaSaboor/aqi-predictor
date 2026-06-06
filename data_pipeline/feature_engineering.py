@@ -61,7 +61,7 @@ def save_features(df):
     db     = client[os.getenv("MONGO_DB")]
     col    = db["engineered_features"]
 
-    col.drop()  # Replace with fresh data each time
+    col.drop()
     col.create_index("datetime", unique=True)
 
     records = df.copy()
