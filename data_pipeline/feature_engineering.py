@@ -8,9 +8,8 @@ load_dotenv()
 sys.path.append(os.path.join(os.path.dirname(__file__), ".."))
 from utils.logger import log_run
 
-
 def load_raw_data():
-    print("🔗 Loading raw data from MongoDB ...")
+    print("Loading raw data from MongoDB ...")
     client  = MongoClient(os.getenv("MONGO_URI"))
     db      = client[os.getenv("MONGO_DB")]
     records = list(db["raw_features"].find({}, {"_id": 0}))
@@ -19,7 +18,7 @@ def load_raw_data():
     df = pd.DataFrame(records)
     df["datetime"] = pd.to_datetime(df["datetime"])
     df = df.sort_values("datetime").reset_index(drop=True)
-    print(f"✅ Loaded {len(df)} raw rows")
+    print(f"Loaded {len(df)} raw rows")
     return df
 
 
@@ -31,7 +30,7 @@ def create_features(df):
     df["weekday"]    = df["datetime"].dt.weekday       # 0=Monday, 6=Sunday
     df["is_weekend"] = (df["weekday"] >= 5).astype(int)
 
-    # Lag features (past AQI values)
+    # Lag features
     df["aqi_lag_1"]  = df["aqi"].shift(1)
     df["aqi_lag_3"]  = df["aqi"].shift(3)
     df["aqi_lag_6"]  = df["aqi"].shift(6)
@@ -45,19 +44,19 @@ def create_features(df):
     # Rate of change
     df["aqi_change_rate"] = df["aqi"].diff(1).round(2)
 
-    # Target columns — what we want to PREDICT
+    # Target columns
     df["target_24h"] = df["aqi"].shift(-24)   # AQI 24 hours from now
     df["target_48h"] = df["aqi"].shift(-48)   # AQI 48 hours from now
     df["target_72h"] = df["aqi"].shift(-72)   # AQI 72 hours from now
 
-    # Drop rows with NaN (caused by lag/shift operations)
+    # Drop rows with NaN
     df = df.dropna().reset_index(drop=True)
-    print(f"✅ Created features: {len(df)} rows × {len(df.columns)} columns")
+    print(f"Created features: {len(df)} rows × {len(df.columns)} columns")
     return df
 
 
 def save_features(df):
-    print("💾 Saving engineered features to MongoDB ...")
+    print("Saving engineered features to MongoDB ...")
     client = MongoClient(os.getenv("MONGO_URI"))
     db     = client[os.getenv("MONGO_DB")]
     col    = db["engineered_features"]
@@ -69,10 +68,9 @@ def save_features(df):
     records["datetime"] = records["datetime"].astype(str)
     col.insert_many(records.to_dict("records"))
 
-    print(f"✅ Saved {len(records)} rows to engineered_features")
+    print(f"Saved {len(records)} rows to engineered_features")
     client.close()
     return len(records)
-
 
 if __name__ == "__main__":
     try:
@@ -87,9 +85,9 @@ if __name__ == "__main__":
             rows_inserted=saved,
             extra_info={"raw_rows": raw_len, "feature_cols": len(df.columns)}
         )
-        print("🎉 Feature engineering complete!")
+        print("Feature engineering complete!")
 
     except Exception as err:
         log_run("feature_engineering", "failed", error_message=str(err))
-        print(f"❌ Failed: {err}")
+        print(f"Failed: {err}")
         raise
