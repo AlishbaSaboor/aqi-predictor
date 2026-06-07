@@ -6,7 +6,7 @@ A fully automated, end-to-end Air Quality Index (AQI) prediction system for Isla
 **[View Live App](https://aqi-predictor-isb.streamlit.app/)**
 
 ## Project Overview
-This project was built as part of the Pearls Internship Program. It predicts the Air Quality Index for Islamabad for the next 3 days using a fully serverless ML pipeline.
+This project was built as part of the 10 Pearls Internship Program. It predicts the Air Quality Index for Islamabad for the next 3 days using a fully serverless ML pipeline.
 
 ## Architecture
 OpenMeteo API (free, no key needed)
