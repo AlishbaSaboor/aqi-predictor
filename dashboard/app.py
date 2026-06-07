@@ -13,11 +13,10 @@ sys.path.append(os.path.join(os.path.dirname(__file__), ".."))
 
 st.set_page_config(
     page_title="Islamabad AQI Predictor",
-    page_icon="🌫️",
+    page_icon="",
     layout="wide"
 )
 
-# Custom CSS for clean professional look
 st.markdown("""
 <style>
     .main { background-color: #f8f9fa; }
@@ -60,7 +59,6 @@ FEATURES = [
 BASE_DIR   = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 MODELS_DIR = os.path.join(BASE_DIR, "models")
 
-
 def aqi_info(aqi):
     if aqi <= 50:   return "#00c853", "Good",      "aqi-good"
     if aqi <= 100:  return "#ffd600", "Moderate",  "aqi-moderate"
@@ -82,17 +80,28 @@ def load_model():
 
 @st.cache_data(ttl=1800)
 def load_data():
-    client  = MongoClient(os.getenv("MONGO_URI"))
-    records = list(client[os.getenv("MONGO_DB")]["engineered_features"].find(
-        {}, {"_id": 0}, limit=5000, sort=[("datetime", -1)]
+    client = MongoClient(os.getenv("MONGO_URI"))
+    db     = client[os.getenv("MONGO_DB")]
+
+    latest_raw = list(db["raw_features"].find(
+        {}, {"_id": 0}, sort=[("datetime", -1)], limit=1
+    ))
+
+    engineered = list(db["engineered_features"].find(
+        {}, {"_id": 0}, sort=[("datetime", -1)], limit=5000
     ))
     client.close()
-    df = pd.DataFrame(records)
-    df["datetime"] = pd.to_datetime(df["datetime"])
-    return df.sort_values("datetime").reset_index(drop=True)
 
+    df_eng = pd.DataFrame(engineered)
+    df_eng["datetime"] = pd.to_datetime(df_eng["datetime"])
+    df_eng = df_eng.sort_values("datetime").reset_index(drop=True)
 
-# ── Header ────────────────────────────────────────────────────
+    if latest_raw:
+        latest_aqi = float(latest_raw[0].get("aqi", df_eng.iloc[-1]["aqi"]))
+        df_eng.iloc[-1, df_eng.columns.get_loc("aqi")] = latest_aqi
+
+    return df_eng
+
 st.markdown("""
 <div style='background: linear-gradient(135deg, #1a1a2e, #16213e);
      padding: 32px; border-radius: 12px; margin-bottom: 24px; color: white;'>
@@ -115,7 +124,6 @@ latest      = df.iloc[-1]
 current_aqi = float(latest["aqi"])
 color, status, css_class = aqi_info(current_aqi)
 
-# ── Alert banner ──────────────────────────────────────────────
 if current_aqi > 150:
     st.markdown(f'<div class="alert-danger">Air Quality Alert — AQI {current_aqi:.0f} is {status}. Avoid outdoor activities.</div>', unsafe_allow_html=True)
 elif current_aqi > 100:
@@ -125,7 +133,6 @@ else:
 
 st.markdown("<br>", unsafe_allow_html=True)
 
-# ── Current conditions ────────────────────────────────────────
 st.markdown('<div class="section-title">Current Conditions</div>', unsafe_allow_html=True)
 
 c1, c2, c3, c4, c5 = st.columns(5)
@@ -144,7 +151,6 @@ metric_card(c5, "Wind Speed",  f"{float(latest.get('wind_speed',0)):.1f}", "km/h
 
 st.markdown("<br>", unsafe_allow_html=True)
 
-# ── 3-Day Forecast ────────────────────────────────────────────
 st.markdown('<div class="section-title">3-Day AQI Forecast</div>', unsafe_allow_html=True)
 
 X_in = np.array([[float(latest.get(c, 0)) for c in FEATURES]])
@@ -169,7 +175,6 @@ for col_w, val, days in zip([f1, f2, f3], [p24, p48, p72], [1, 2, 3]):
 
 st.markdown("<br>", unsafe_allow_html=True)
 
-# ── Historical AQI chart ──────────────────────────────────────
 st.markdown('<div class="section-title">Historical AQI — Last 7 Days</div>', unsafe_allow_html=True)
 
 recent = df.tail(7 * 24)
@@ -192,7 +197,6 @@ fig.update_layout(
 )
 st.plotly_chart(fig, use_container_width=True)
 
-# ── Model performance ─────────────────────────────────────────
 st.markdown('<div class="section-title">Model Performance</div>', unsafe_allow_html=True)
 
 mdf = pd.DataFrame(metrics).T.reset_index()
