@@ -10,15 +10,15 @@ This project was built as part of the Pearls Internship Program. It predicts the
 
 ## Architecture
 OpenMeteo API (free, no key needed)
-↓
+-->
 GitHub Actions (runs every hour)
-↓
+-->
 MongoDB Atlas (Feature Store)
-↓
+-->
 Feature Engineering Pipeline
-↓
+-->
 Model Training (daily retraining)
-↓
+-->
 Streamlit Dashboard (live forecast)
 
 ## Tech Stack
